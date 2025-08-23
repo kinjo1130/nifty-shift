@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
+    console.log('Session:', session)
     
     // ログインユーザーの場合は自分のスケジュールのみ取得
     const schedules = await prisma.schedule.findMany({
