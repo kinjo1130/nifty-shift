@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                 String    @id @default(cuid())
+  userId             String
+  providerType       String
+  providerId         String
+  providerAccountId  String
+  refreshToken       String?
+  accessToken        String?
+  accessTokenExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id])
+
+  @@unique([providerId, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  ownedSchedules Schedule[]  /// このユーザーが作成者のスケジュール一覧
+
+  participants   Participant[] /// このユーザーとして応募した参加者レコード（ログイン応募時のみ）
+}
+
+model VerificationRequest {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
+/// 日程調整の企画（親単位）
+model Schedule {
+  id          String    @id @default(cuid()) /// スケジュールID
+  ownerUserId String?                        /// 作成者ユーザーID（未ログイン作成ならnull）
+  ownerUser   User?     @relation(fields: [ownerUserId], references: [id]) /// 作成者ユーザー
+  title       String                        /// スケジュール名（例: アルバイト8月シフト）
+  description String?                      /// 補足説明（任意）
+
+  // 関連
+  slots          Slot[]         /// このスケジュールの候補枠
+  participants   Participant[]  /// 応募者
+  availabilities Availability[] /// 応募者の可用枠選択
+  assignments    Assignment[]   /// 確定した割当
+
+  createdAt   DateTime @default(now()) /// 作成日時
+  updatedAt   DateTime @updatedAt      /// 更新日時
+}
+
+/// 1つの候補枠（時間帯）
+model Slot {
+  id          String    @id @default(cuid()) /// 枠ID
+  scheduleId  String                        /// 紐づくスケジュールID
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id]) /// 親スケジュール
+
+  startsAt    DateTime                      /// 開始日時
+  endsAt      DateTime                      /// 終了日時
+  capacity    Int                           /// 必要人数
+
+  // 関連
+  assignments    Assignment[]    /// この枠に割り当てられた参加者
+  availabilities Availability[]  /// この枠を「行ける」と回答した参加者
+
+  createdAt   DateTime @default(now()) /// 作成日時
+  updatedAt   DateTime @updatedAt      /// 更新日時
+
+  @@index([scheduleId, startsAt])       /// スケジュール内の時系列ソート用
+}
+
+/// 応募者
+model Participant {
+  id          String    @id @default(cuid()) /// 応募者ID
+  scheduleId  String                        /// 紐づくスケジュールID
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id]) /// 親スケジュール
+
+  userId      String?                      /// ログイン応募時のユーザーID（未ログイン応募ならnull）
+  user        User?     @relation(fields: [userId], references: [id]) /// 紐づくユーザー
+
+  name        String                        /// 応募者名（公開フォーム入力）
+  email       String                        /// 応募者メール（スケジュール内ユニーク）
+  note        String?                       /// 備考（任意）
+
+  // 関連
+  availabilities Availability[] /// 応募者が選んだ可用枠
+  assignments    Assignment[]   /// 応募者に決まった割当
+
+  createdAt   DateTime @default(now()) /// 作成日時
+  updatedAt   DateTime @updatedAt      /// 更新日時
+
+  @@unique([scheduleId, email])        /// 同一スケジュール内で同じメールは1人に限定
+  @@index([userId])                    /// ユーザー紐付けでの検索を最適化
+}
+
+/// 応募者が「この枠に行ける」と回答した情報
+model Availability {
+  id            String       @id @default(cuid()) /// 応募情報ID
+  scheduleId    String                          /// 紐づくスケジュールID
+  schedule      Schedule     @relation(fields: [scheduleId], references: [id]) /// 親スケジュール
+
+  participantId String                          /// 応募者ID
+  participant   Participant  @relation(fields: [participantId], references: [id]) /// 応募者
+
+  slotId        String                          /// 枠ID
+  slot          Slot         @relation(fields: [slotId], references: [id]) /// 枠
+
+  createdAt     DateTime     @default(now())    /// 作成日時
+
+  @@unique([participantId, slotId])            /// 同一参加者が同一枠を重複回答不可
+  @@index([scheduleId, slotId])                /// スケジュール内での枠別集計を高速化
+}
+
+/// 確定した割当（誰をどの枠に入れるか）
+model Assignment {
+  id            String       @id @default(cuid()) /// 割当ID
+  scheduleId    String                          /// 紐づくスケジュールID
+  schedule      Schedule     @relation(fields: [scheduleId], references: [id]) /// 親スケジュール
+
+  slotId        String                          /// 枠ID
+  slot          Slot         @relation(fields: [slotId], references: [id]) /// 割当枠
+
+  participantId String                          /// 応募者ID
+  participant   Participant  @relation(fields: [participantId], references: [id]) /// 割当された応募者
+
+  createdAt     DateTime @default(now())        /// 作成日時
+  updatedAt     DateTime @updatedAt             /// 更新日時
+
+  @@unique([slotId, participantId])            /// 同じ枠に同じ人を二重割当しない
+  @@index([scheduleId, slotId])                /// 枠別割当の取得を高速化
+  @@index([scheduleId, participantId])         /// 参加者別の割当取得を高速化
+}
