@@ -2,8 +2,8 @@
 
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import LoginButton from './components/LoginButton'
+import { authOptions } from '@/lib/auth'
 
 export default async function Home() {
   const session = await getServerSession(authOptions)

@@ -1,7 +1,6 @@
 'use server'
 
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -9,6 +8,7 @@ import QRCodeGenerator from './QRCodeGenerator'
 import ParticipantsList from './ParticipantsList'
 import CopyButton from '@/app/components/CopyButton'
 import AssignmentManager from './AssignmentManager'
+import { authOptions } from '@/lib/auth'
 
 async function getSchedule(id: string, userEmail: string) {
   const schedule = await prisma.schedule.findFirst({
