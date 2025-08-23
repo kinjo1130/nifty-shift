@@ -1,104 +1,103 @@
 # Nifty Shift
 
-Next.js (Frontend) + Express/Prisma (Backend) のフルスタックアプリケーション
+Next.js フルスタックアプリケーション（Google認証対応）
+
+## アーキテクチャ
+
+- **Frontend/Backend**: Next.js 14 (App Router)
+- **Database**: PostgreSQL (ローカル: Docker, 本番: Neon)
+- **認証**: NextAuth.js + Google OAuth
+- **ORM**: Prisma
+- **スタイリング**: Tailwind CSS
 
 ## 必要な環境
 
 - Node.js 18以上
 - Docker & Docker Compose
 - npm または yarn
+- Google Cloud Console アカウント（OAuth設定用）
 
 ## ローカル開発環境のセットアップ
 
 ### 1. リポジトリのクローン
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/kinjo1130/nifty-shift.git
 cd nifty-shift
 ```
 
 ### 2. 依存関係のインストール
 
 ```bash
-# Backendの依存関係
-cd backend
-npm install
-
-# Frontendの依存関係
-cd ../frontend
+cd frontend
 npm install
 ```
 
-### 3. 環境変数の設定
+### 3. Google OAuth の設定
 
-Backend用の環境変数ファイルを作成:
+1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
+2. 新しいプロジェクトを作成または既存のプロジェクトを選択
+3. 「APIとサービス」→「認証情報」→「認証情報を作成」→「OAuth クライアント ID」
+4. アプリケーションの種類: 「ウェブアプリケーション」
+5. 承認済みのリダイレクト URI に追加:
+   - `http://localhost:3000/api/auth/callback/google` (開発用)
+   - `https://your-domain.com/api/auth/callback/google` (本番用)
+
+### 4. 環境変数の設定
 
 ```bash
-cd backend
-cp .env.local .env
+cd frontend
+cp .env.sample .env
 ```
 
-Frontend用の環境変数ファイルを作成:
+`.env` ファイルを編集:
 
-```bash
-cd ../frontend
-cp .env.local .env
+```env
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/niftyshift?schema=public"
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret  # openssl rand -base64 32 で生成
+
+NODE_ENV=development
 ```
 
-### 4. データベースの起動
+### 5. データベースの起動
 
 プロジェクトルートで以下を実行:
 
 ```bash
-docker compose build && docker compose up
+docker compose up -d
 ```
 
 これによりPostgreSQLがポート5432で起動します。
 
-### 5. データベースのマイグレーション
+### 6. データベースのセットアップ
 
 ```bash
-cd backend
+cd frontend
+
+# Prismaクライアントを生成
+npx prisma generate
+
+# データベースマイグレーション実行
 npx prisma migrate dev
 ```
 
-### 6. アプリケーションの起動
+### 7. アプリケーションの起動
 
-2つのターミナルを開いて、それぞれで以下を実行:
-
-**Backend (ターミナル1):**
 ```bash
-cd backend
 npm run dev
 ```
-→ http://localhost:8080 で起動
 
-**Frontend (ターミナル2):**
-```bash
-cd frontend
-npm run dev
-```
 → http://localhost:3000 で起動
 
 ## 開発用コマンド
-
-### Backend
-
-```bash
-# 開発サーバー起動
-npm run dev
-
-# Prismaスタジオ起動（DBをGUIで確認）
-npx prisma studio
-
-# マイグレーション作成
-npx prisma migrate dev --name <migration-name>
-
-# Prismaクライアント生成
-npx prisma generate
-```h
-
-### Frontend
 
 ```bash
 # 開発サーバー起動
@@ -112,6 +111,15 @@ npm run start
 
 # Lint実行
 npm run lint
+
+# Prismaスタジオ起動（DBをGUIで確認）
+npx prisma studio
+
+# マイグレーション作成
+npx prisma migrate dev --name <migration-name>
+
+# Prismaクライアント生成
+npx prisma generate
 ```
 
 ### Docker
@@ -131,15 +139,52 @@ docker-compose down -v
 docker-compose up -d
 ```
 
+## プロジェクト構成
+
+```
+nifty-shift/
+├── frontend/               # Next.jsアプリケーション
+│   ├── app/               # App Router
+│   │   ├── api/          # API Routes
+│   │   │   ├── auth/     # NextAuth認証
+│   │   │   └── schedules/ # スケジュールAPI
+│   │   ├── components/   # Reactコンポーネント
+│   │   └── page.tsx      # ホームページ
+│   ├── lib/              # ユーティリティ
+│   │   └── prisma.ts     # Prismaクライアント
+│   ├── prisma/           # Prismaスキーマ
+│   └── public/           # 静的ファイル
+├── scripts/              # デプロイメントスクリプト
+└── docker-compose.yml    # ローカルDB設定
+```
+
 ## API エンドポイント
 
-Backend APIは以下のエンドポイントを提供:
+### 認証
+- `GET/POST /api/auth/*` - NextAuth.js認証エンドポイント
 
-- `GET /health` - ヘルスチェック
-- `GET /api/users` - ユーザー一覧取得
-- `POST /api/users` - ユーザー作成
-- `GET /api/posts` - 投稿一覧取得
-- `POST /api/posts` - 投稿作成
+### スケジュール管理
+- `GET /api/schedules` - スケジュール一覧取得
+- `POST /api/schedules` - スケジュール作成
+- `GET /api/schedules/[id]` - スケジュール詳細取得
+- `PUT /api/schedules/[id]` - スケジュール更新
+- `DELETE /api/schedules/[id]` - スケジュール削除
+
+## デプロイメント
+
+### Cloud Run へのデプロイ
+
+1. GCPプロジェクトの設定
+2. Secret Managerでシークレット設定
+3. デプロイスクリプトの実行:
+
+```bash
+# ステージング環境
+./scripts/deploy-frontend-stg.sh
+
+# 本番環境
+./scripts/deploy-frontend-prod.sh
+```
 
 ## トラブルシューティング
 
@@ -147,8 +192,7 @@ Backend APIは以下のエンドポイントを提供:
 
 ```bash
 # 使用中のポートを確認
-lsof -i :3000  # Frontend
-lsof -i :8080  # Backend
+lsof -i :3000  # Next.js
 lsof -i :5432  # PostgreSQL
 
 # プロセスを終了
@@ -164,7 +208,7 @@ kill -9 <PID>
 
 2. 環境変数が正しく設定されているか確認:
    ```bash
-   cat backend/.env
+   cat frontend/.env
    ```
 
 3. データベースに接続できるか確認:
@@ -176,9 +220,15 @@ kill -9 <PID>
 
 ```bash
 # Prismaクライアントを再生成
-cd backend
+cd frontend
 npx prisma generate
 
 # スキーマとDBを同期
 npx prisma db push
 ```
+
+### Google認証エラー
+
+1. Google Cloud ConsoleでOAuth設定を確認
+2. リダイレクトURIが正しく設定されているか確認
+3. 環境変数の`GOOGLE_CLIENT_ID`と`GOOGLE_CLIENT_SECRET`を確認
