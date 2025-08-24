@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 
 interface TimeSlot {
   id: string
@@ -12,36 +13,18 @@ interface TimeSlot {
   capacity: number
 }
 
+const ScheduleCalendar = dynamic(
+  () => import('@/app/components/ScheduleCalendar'),
+  { ssr: false }
+)
+
 export default function NewSchedulePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [slots, setSlots] = useState<TimeSlot[]>([])
-  
-  // 新しいスロットを追加
-  const addSlot = () => {
-    const newSlot: TimeSlot = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      startTime: '09:00',
-      endTime: '10:00',
-      capacity: 1
-    }
-    setSlots([...slots, newSlot])
-  }
-
-  // スロットを削除
-  const removeSlot = (id: string) => {
-    setSlots(slots.filter(slot => slot.id !== id))
-  }
-
-  // スロットを更新
-  const updateSlot = (id: string, field: keyof TimeSlot, value: string | number) => {
-    setSlots(slots.map(slot => 
-      slot.id === id ? { ...slot, [field]: value } : slot
-    ))
-  }
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
   // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,81 +132,143 @@ export default function NewSchedulePage() {
               <h2 className="text-lg font-medium text-gray-900">
                 候補枠登録
               </h2>
-              <button
-                type="button"
-                onClick={addSlot}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                追加
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('calendar')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                    viewMode === 'calendar' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  カレンダー表示
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  リスト表示
+                </button>
+              </div>
             </div>
 
-            {slots.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>候補日時が選択されていません</p>
-                <p className="text-sm mt-2">参加者が選択できる日時枠を設定します</p>
-              </div>
+            {viewMode === 'calendar' ? (
+              <ScheduleCalendar 
+                slots={slots}
+                onSlotsChange={setSlots}
+                mode="create"
+              />
             ) : (
-              <div className="space-y-3">
-                {slots.map((slot, index) => (
-                  <div key={slot.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-500 w-8">
-                      {index + 1}
-                    </span>
-                    
-                    <input
-                      type="date"
-                      value={slot.date}
-                      onChange={(e) => updateSlot(slot.id, 'date', e.target.value)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-                      required
-                    />
-                    
-                    <input
-                      type="time"
-                      value={slot.startTime}
-                      onChange={(e) => updateSlot(slot.id, 'startTime', e.target.value)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-                      required
-                    />
-                    
-                    <span className="text-gray-500">〜</span>
-                    
-                    <input
-                      type="time"
-                      value={slot.endTime}
-                      onChange={(e) => updateSlot(slot.id, 'endTime', e.target.value)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-                      required
-                    />
-                    
-                    <div className="flex items-center gap-1">
-                      <label className="text-sm text-gray-600">必要人数:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={slot.capacity}
-                        onChange={(e) => updateSlot(slot.id, 'capacity', parseInt(e.target.value))}
-                        className="w-16 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
-                        required
-                      />
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={() => removeSlot(slot.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+              <>
+                <div className="flex justify-end mb-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSlot: TimeSlot = {
+                        id: Date.now().toString(),
+                        date: new Date().toISOString().split('T')[0],
+                        startTime: '09:00',
+                        endTime: '10:00',
+                        capacity: 1
+                      }
+                      setSlots([...slots, newSlot])
+                    }}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    追加
+                  </button>
+                </div>
+
+                {slots.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>候補日時が選択されていません</p>
+                    <p className="text-sm mt-2">参加者が選択できる日時枠を設定します</p>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="space-y-3">
+                    {slots.map((slot, index) => (
+                      <div key={slot.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                        <span className="text-sm font-medium text-gray-500 w-8">
+                          {index + 1}
+                        </span>
+                        
+                        <input
+                          type="date"
+                          value={slot.date}
+                          onChange={(e) => {
+                            setSlots(slots.map(s => 
+                              s.id === slot.id ? { ...s, date: e.target.value } : s
+                            ))
+                          }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                          required
+                        />
+                        
+                        <input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => {
+                            setSlots(slots.map(s => 
+                              s.id === slot.id ? { ...s, startTime: e.target.value } : s
+                            ))
+                          }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                          required
+                        />
+                        
+                        <span className="text-gray-500">〜</span>
+                        
+                        <input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => {
+                            setSlots(slots.map(s => 
+                              s.id === slot.id ? { ...s, endTime: e.target.value } : s
+                            ))
+                          }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                          required
+                        />
+                        
+                        <div className="flex items-center gap-1">
+                          <label className="text-sm text-gray-600">必要人数:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={slot.capacity}
+                            onChange={(e) => {
+                              setSlots(slots.map(s => 
+                                s.id === slot.id ? { ...s, capacity: parseInt(e.target.value) || 1 } : s
+                              ))
+                            }}
+                            className="w-16 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+                            required
+                          />
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setSlots(slots.filter(s => s.id !== slot.id))}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 

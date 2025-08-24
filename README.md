@@ -172,18 +172,81 @@ nifty-shift/
 
 ## デプロイメント
 
-### Cloud Run へのデプロイ
+### 前提条件
 
-1. GCPプロジェクトの設定
-2. Secret Managerでシークレット設定
-3. デプロイスクリプトの実行:
+1. Google Cloud SDK のインストール
+2. GCPプロジェクトの作成と設定
+3. 必要なAPIの有効化:
+   - Cloud Run API
+   - Cloud Build API
+   - Secret Manager API
+   - Container Registry API
+
+### シークレットの設定
+
+環境ごとのシークレットをGoogle Cloud Secret Managerに登録:
+
+```bash
+# ステージング環境のシークレット登録
+cd scripts
+./setup-staging-secrets.sh
+
+# 本番環境のシークレット登録
+./setup-prod-secrets.sh
+```
+
+### Cloud Build を使用したデプロイ（推奨）
+
+Cloud Buildを使用することで、以下が自動的に実行されます:
+1. Dockerイメージのビルド
+2. データベースマイグレーション（Cloud Run Jobs使用）
+3. アプリケーションのデプロイ
+
+```bash
+# ステージング環境へのデプロイ
+gcloud builds submit --config=cloudbuild-stg.yaml --project=nifty-shift
+
+# 本番環境へのデプロイ
+gcloud builds submit --config=cloudbuild-prod.yaml --project=nifty-shift
+```
+
+### 手動デプロイ（代替方法）
+
+シェルスクリプトを使用した手動デプロイ:
 
 ```bash
 # ステージング環境
-./scripts/deploy-frontend-stg.sh
+cd scripts
+./deploy-stg.sh
 
 # 本番環境
-./scripts/deploy-frontend-prod.sh
+./deploy-prod.sh
+```
+
+### デプロイの流れ
+
+1. **Dockerイメージのビルド**: マルチステージビルドで最適化されたイメージを作成
+2. **データベースマイグレーション**: Cloud Run Jobsでマイグレーションを実行
+3. **アプリケーションデプロイ**: Cloud Runにデプロイ
+
+### 環境変数とシークレット
+
+各環境で必要な環境変数:
+- `DATABASE_URL`: PostgreSQL接続文字列
+- `NEXTAUTH_SECRET`: NextAuth.js用のシークレット
+- `NEXTAUTH_URL`: アプリケーションのURL
+- `GOOGLE_CLIENT_ID`: Google OAuth クライアントID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth クライアントシークレット
+
+### デプロイ後の確認
+
+```bash
+# サービスの状態確認
+gcloud run services describe nifty-shift-stg --region=asia-northeast1
+gcloud run services describe nifty-shift-prod --region=asia-northeast1
+
+# ログの確認
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=nifty-shift-stg" --limit 50
 ```
 
 ## トラブルシューティング
