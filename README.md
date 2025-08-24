@@ -195,24 +195,12 @@ cd scripts
 ./setup-prod-secrets.sh
 ```
 
-### Cloud Build を使用したデプロイ（推奨）
+### シェルスクリプトデプロイ（推奨）
 
-Cloud Buildを使用することで、以下が自動的に実行されます:
-1. Dockerイメージのビルド
+シェルスクリプトを使用した無料デプロイ。以下が自動的に実行されます:
+1. Dockerイメージのビルド&プッシュ
 2. データベースマイグレーション（Cloud Run Jobs使用）
 3. アプリケーションのデプロイ
-
-```bash
-# ステージング環境へのデプロイ
-gcloud builds submit --config=cloudbuild-stg.yaml --project=nifty-shift
-
-# 本番環境へのデプロイ
-gcloud builds submit --config=cloudbuild-prod.yaml --project=nifty-shift
-```
-
-### 手動デプロイ（代替方法）
-
-シェルスクリプトを使用した手動デプロイ:
 
 ```bash
 # ステージング環境
