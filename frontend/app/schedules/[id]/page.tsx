@@ -195,7 +195,11 @@ export default async function ScheduleDetailPage({
               />
 
               {/* 参加者一覧 */}
-              <ParticipantsList participants={schedule.participants} />
+              <ParticipantsList 
+                participants={schedule.participants} 
+                slots={schedule.slots}
+                scheduleId={schedule.id}
+              />
             </div>
 
             {/* サイドバー */}

@@ -106,35 +106,10 @@ export default async function PublicSchedulePage({
                           })}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-medium ${
-                          isAvailable ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {isAvailable ? `残り ${remainingCapacity} 枠` : '満員'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          必要人数: {slot.capacity}人
-                        </p>
-                      </div>
+                     
                     </div>
-                    
-                    {slot.availabilities.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-gray-500 mb-2">
-                          応募者 ({slot.availabilities.length}人):
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {slot.availabilities.map((availability) => (
-                            <span
-                              key={availability.id}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600"
-                            >
-                              {availability.participant.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  
+                  
                   </div>
                 )
               })}

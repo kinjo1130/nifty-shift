@@ -280,7 +280,7 @@ export default function AssignmentManager({ scheduleId, participants, slots }: A
                     <p className="font-medium text-gray-900">{participant.name}</p>
                     <p className="text-xs text-gray-500">{participant.email}</p>
                     <p className="text-xs text-gray-500">
-                      応募枠: {participant.availabilities.length}個
+                      候補枠: {participant.availabilities.length}個
                     </p>
                   </div>
                 </div>

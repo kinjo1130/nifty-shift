@@ -1,5 +1,16 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import EditParticipantModal from './EditParticipantModal'
+
+interface Slot {
+  id: string
+  startsAt: Date
+  endsAt: Date
+  capacity: number
+}
+
 interface Participant {
   id: string
   name: string
@@ -24,9 +35,16 @@ interface Participant {
 
 interface ParticipantsListProps {
   participants: Participant[]
+  slots?: Slot[]
+  scheduleId?: string
 }
 
-export default function ParticipantsList({ participants }: ParticipantsListProps) {
+export default function ParticipantsList({ participants, slots, scheduleId }: ParticipantsListProps) {
+  const router = useRouter()
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean
+    participant: Participant | null
+  }>({ isOpen: false, participant: null })
   if (participants.length === 0) {
     return (
       <div>
@@ -52,7 +70,7 @@ export default function ParticipantsList({ participants }: ParticipantsListProps
                 メール
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                応募枠数
+                候補枠数
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 確定枠数
@@ -63,6 +81,11 @@ export default function ParticipantsList({ participants }: ParticipantsListProps
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 登録日
               </th>
+              {slots && scheduleId && (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  操作
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -86,11 +109,37 @@ export default function ParticipantsList({ participants }: ParticipantsListProps
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                   {new Date(participant.createdAt).toLocaleDateString('ja-JP')}
                 </td>
+                
+                {slots && scheduleId && (
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => setEditModal({ isOpen: true, participant })}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      編集
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* 編集モーダル */}
+      {editModal.participant && slots && scheduleId && (
+        <EditParticipantModal
+          isOpen={editModal.isOpen}
+          onClose={() => setEditModal({ isOpen: false, participant: null })}
+          participant={editModal.participant}
+          allSlots={slots}
+          scheduleId={scheduleId}
+          onUpdateComplete={() => {
+            router.refresh()
+            setEditModal({ isOpen: false, participant: null })
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -144,7 +144,6 @@ export default function ParticipantForm({ scheduleId, slots }: ParticipantFormPr
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="全員参加でお願いします。"
               />
             </div>
           </div>
@@ -194,9 +193,7 @@ export default function ParticipantForm({ scheduleId, slots }: ParticipantFormPr
                         })}
                       </p>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      残り {slot.remainingCapacity} 枠
-                    </div>
+                  
                   </label>
                 )
               })}
