@@ -72,7 +72,8 @@ export default async function ScheduleDetailPage({
     notFound()
   }
 
-  const publicUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/s/${schedule.id}`
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXTAUTH_URL || 'http://localhost:3000')
+  const publicUrl = `${baseUrl}/s/${schedule.id}`
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
