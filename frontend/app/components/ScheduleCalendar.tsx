@@ -5,7 +5,7 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { EventInput, DateSelectArg, EventClickArg } from '@fullcalendar/core'
+import { EventInput, DateSelectArg, EventClickArg, EventDropArg, EventChangeArg } from '@fullcalendar/core'
 
 interface TimeSlot {
   id: string
@@ -94,6 +94,50 @@ export default function ScheduleCalendar({
     setSelectedSlot(null)
   }
 
+  const handleEventDrop = useCallback((dropInfo: EventDropArg) => {
+    const slotId = dropInfo.event.id
+    const newStart = dropInfo.event.start
+    const newEnd = dropInfo.event.end
+
+    if (!newStart || !newEnd) return
+
+    const updatedSlots = slots.map(slot => {
+      if (slot.id === slotId) {
+        return {
+          ...slot,
+          date: newStart.toISOString().split('T')[0],
+          startTime: newStart.toTimeString().slice(0, 5),
+          endTime: newEnd.toTimeString().slice(0, 5)
+        }
+      }
+      return slot
+    })
+
+    onSlotsChange(updatedSlots)
+  }, [slots, onSlotsChange])
+
+  const handleEventResize = useCallback((resizeInfo: EventClickArg) => {
+    const slotId = resizeInfo.event.id
+    const newStart = resizeInfo.event.start
+    const newEnd = resizeInfo.event.end
+
+    if (!newStart || !newEnd) return
+
+    const updatedSlots = slots.map(slot => {
+      if (slot.id === slotId) {
+        return {
+          ...slot,
+          date: newStart.toISOString().split('T')[0],
+          startTime: newStart.toTimeString().slice(0, 5),
+          endTime: newEnd.toTimeString().slice(0, 5)
+        }
+      }
+      return slot
+    })
+
+    onSlotsChange(updatedSlots)
+  }, [slots, onSlotsChange])
+
   return (
     <div className="relative">
       <div className="bg-white rounded-lg shadow p-4">
@@ -127,12 +171,16 @@ export default function ScheduleCalendar({
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
           }}
           initialView='timeGridWeek'
-          editable={false}
+          editable={true}
+          eventDurationEditable={true}
+          eventResizableFromStart={true}
           selectable={true}
           selectMirror={true}
           select={handleDateSelect}
           events={events}
           eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
           locale='ja'
           businessHours={{
             daysOfWeek: [1, 2, 3, 4, 5],
